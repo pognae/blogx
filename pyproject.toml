@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tistory-auto-publisher"
+version = "0.1.0"
+description = "Low-resource Windows folder-based Tistory auto publisher"
+requires-python = ">=3.9"
+dependencies = ["playwright>=1.44,<2"]
+
+[project.scripts]
+tistory-auto-publisher = "tistory_auto_publisher.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

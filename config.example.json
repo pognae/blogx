@@ -1,0 +1,36 @@
+{
+  "blog_name": "your-blog-name",
+  "timezone": "Asia/Seoul",
+  "posts_per_run": 3,
+  "folders": {
+    "queue": "posts/queue",
+    "done": "posts/done",
+    "failed": "posts/failed",
+    "logs": "logs",
+    "data": "data",
+    "browser_profile": "browser-profile"
+  },
+  "browser": {
+    "channel": "msedge",
+    "headless": false,
+    "slow_mo_ms": 0,
+    "timeout_ms": 45000,
+    "success_wait_ms": 8000,
+    "paste_shortcut": "Control+V"
+  },
+  "publish": {
+    "dry_run": false,
+    "visibility": "public"
+  },
+  "retry": {
+    "login_retries": 2,
+    "publish_retries": 2,
+    "retry_delay_seconds": 60
+  },
+  "telegram": {
+    "enabled": false,
+    "bot_token": "",
+    "chat_id": "",
+    "notify_on_success": false
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tistory Auto Publisher"
+  short_description: "Tistory folder-based posting workflow"
+  default_prompt: "Use $tistory-auto-publisher to maintain or operate the Tistory folder-based auto publisher."
