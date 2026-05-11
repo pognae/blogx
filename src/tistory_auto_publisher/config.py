@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "timeout_ms": 45000,
         "success_wait_ms": 8000,
         "paste_shortcut": "Control+V",
+        "select_all_shortcut": "Control+A",
     },
     "publish": {
         "dry_run": False,
@@ -86,9 +88,34 @@ def load_config(config_path: str | Path) -> tuple[dict[str, Any], Path]:
         user_config = json.load(handle)
 
     config = deep_merge(DEFAULT_CONFIG, user_config)
+    normalize_runtime_defaults(config)
     config["_config_path"] = str(path)
     config["_base_dir"] = str(path.parent)
     return config, path.parent
+
+
+def normalize_runtime_defaults(config: dict[str, Any]) -> None:
+    """
+    Make config safer across OSes without requiring user edits.
+    - 'msedge' channel is primarily for Windows; on non-Windows, fall back to Playwright default.
+    - Keyboard shortcuts differ on macOS (Meta) vs Windows/Linux (Control).
+    """
+
+    browser = config.get("browser", {})
+
+    if sys.platform != "win32" and str(browser.get("channel") or "").lower() == "msedge":
+        browser["channel"] = None
+
+    if sys.platform == "darwin":
+        if browser.get("paste_shortcut") in (None, "", "Control+V"):
+            browser["paste_shortcut"] = "Meta+V"
+        if browser.get("select_all_shortcut") in (None, "", "Control+A"):
+            browser["select_all_shortcut"] = "Meta+A"
+    else:
+        if browser.get("paste_shortcut") in (None, ""):
+            browser["paste_shortcut"] = "Control+V"
+        if browser.get("select_all_shortcut") in (None, ""):
+            browser["select_all_shortcut"] = "Control+A"
 
 
 def write_default_config(path: str | Path) -> Path:

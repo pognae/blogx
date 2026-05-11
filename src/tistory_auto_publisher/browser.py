@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Any
 
 from .config import folder_path
@@ -38,21 +39,7 @@ class TistoryBrowser:
         profile_dir = folder_path(self.config, "browser_profile")
         profile_dir.mkdir(parents=True, exist_ok=True)
         self.playwright = sync_playwright().start()
-        self.context = self.playwright.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir),
-            channel=browser_config.get("channel") or "msedge",
-            headless=bool(browser_config.get("headless", False)),
-            slow_mo=int(browser_config.get("slow_mo_ms", 0)),
-            viewport={"width": 1280, "height": 900},
-            args=[
-                "--disable-background-networking",
-                "--disable-background-timer-throttling",
-                "--disable-extensions",
-                "--disable-notifications",
-                "--disable-dev-shm-usage",
-                "--no-first-run",
-            ],
-        )
+        self.context = self._launch_persistent_context(profile_dir, browser_config)
         self.context.set_default_timeout(int(browser_config.get("timeout_ms", 45000)))
         return self
 
@@ -134,7 +121,7 @@ class TistoryBrowser:
             locator.fill(title)
         except Exception:
             locator.click()
-            page.keyboard.press("Control+A")
+            page.keyboard.press(self._select_all_shortcut())
             page.keyboard.insert_text(title)
         self._dispatch_input(locator)
         self.logger.info("Title filled: %s", title)
@@ -274,3 +261,37 @@ class TistoryBrowser:
             )
         except Exception:
             pass
+
+    def _select_all_shortcut(self) -> str:
+        shortcut = self.config.get("browser", {}).get("select_all_shortcut")
+        if shortcut:
+            return str(shortcut)
+        return "Meta+A" if sys.platform == "darwin" else "Control+A"
+
+    def _launch_persistent_context(self, profile_dir: Any, browser_config: dict[str, Any]) -> Any:
+        channel = browser_config.get("channel")
+        base_kwargs = dict(
+            user_data_dir=str(profile_dir),
+            headless=bool(browser_config.get("headless", False)),
+            slow_mo=int(browser_config.get("slow_mo_ms", 0)),
+            viewport={"width": 1280, "height": 900},
+            args=[
+                "--disable-background-networking",
+                "--disable-background-timer-throttling",
+                "--disable-extensions",
+                "--disable-notifications",
+                "--disable-dev-shm-usage",
+                "--no-first-run",
+            ],
+        )
+
+        try:
+            if channel:
+                return self.playwright.chromium.launch_persistent_context(channel=channel, **base_kwargs)
+            return self.playwright.chromium.launch_persistent_context(**base_kwargs)
+        except Exception as exc:
+            # Common on macOS/Linux when 'msedge' channel is configured but not installed.
+            if channel:
+                self.logger.warning("Browser launch failed with channel=%r; retrying without channel. (%s)", channel, exc)
+                return self.playwright.chromium.launch_persistent_context(**base_kwargs)
+            raise
