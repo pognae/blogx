@@ -270,19 +270,36 @@ class TistoryBrowser:
 
     def _launch_persistent_context(self, profile_dir: Any, browser_config: dict[str, Any]) -> Any:
         channel = browser_config.get("channel")
+        headless = bool(browser_config.get("headless", False))
+        args = [
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-extensions",
+            "--disable-notifications",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+        ]
+
+        if headless and sys.platform.startswith("linux"):
+            # Shared/containerized Linux hosts (e.g. PythonAnywhere) typically lack a
+            # working Chromium sandbox and GPU stack, so add safe fallbacks.
+            for flag in ("--no-sandbox", "--disable-gpu", "--disable-software-rasterizer"):
+                if flag not in args:
+                    args.append(flag)
+
+        extra_args = browser_config.get("extra_args") or []
+        if isinstance(extra_args, list):
+            for flag in extra_args:
+                flag_str = str(flag).strip()
+                if flag_str and flag_str not in args:
+                    args.append(flag_str)
+
         base_kwargs = dict(
             user_data_dir=str(profile_dir),
-            headless=bool(browser_config.get("headless", False)),
+            headless=headless,
             slow_mo=int(browser_config.get("slow_mo_ms", 0)),
             viewport={"width": 1280, "height": 900},
-            args=[
-                "--disable-background-networking",
-                "--disable-background-timer-throttling",
-                "--disable-extensions",
-                "--disable-notifications",
-                "--disable-dev-shm-usage",
-                "--no-first-run",
-            ],
+            args=args,
         )
 
         try:

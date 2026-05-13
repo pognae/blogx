@@ -28,6 +28,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "success_wait_ms": 8000,
         "paste_shortcut": "Control+V",
         "select_all_shortcut": "Control+A",
+        "extra_args": [],
     },
     "publish": {
         "dry_run": False,
@@ -99,9 +100,10 @@ def normalize_runtime_defaults(config: dict[str, Any]) -> None:
     Make config safer across OSes without requiring user edits.
     - 'msedge' channel is primarily for Windows; on non-Windows, fall back to Playwright default.
     - Keyboard shortcuts differ on macOS (Meta) vs Windows/Linux (Control).
+    - Environment variables let hosted environments (e.g. PythonAnywhere) override safely.
     """
 
-    browser = config.get("browser", {})
+    browser = config.setdefault("browser", {})
 
     if sys.platform != "win32" and str(browser.get("channel") or "").lower() == "msedge":
         browser["channel"] = None
@@ -116,6 +118,18 @@ def normalize_runtime_defaults(config: dict[str, Any]) -> None:
             browser["paste_shortcut"] = "Control+V"
         if browser.get("select_all_shortcut") in (None, ""):
             browser["select_all_shortcut"] = "Control+A"
+
+    headless_env = os.getenv("TISTORY_HEADLESS")
+    if headless_env is not None:
+        truthy = headless_env.strip().lower() in {"1", "true", "yes", "on"}
+        falsy = headless_env.strip().lower() in {"0", "false", "no", "off"}
+        if truthy:
+            browser["headless"] = True
+        elif falsy:
+            browser["headless"] = False
+
+    if "extra_args" not in browser or browser["extra_args"] is None:
+        browser["extra_args"] = []
 
 
 def write_default_config(path: str | Path) -> Path:
